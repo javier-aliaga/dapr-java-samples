@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-consumer
+spec:
+  selector:
+    matchLabels:
+      app: app-consumer
+  template:
+    metadata:
+      annotations:  
+        dapr.io/app-id: app-consumer
+        dapr.io/app-port: "3000"
+        dapr.io/app-protocol: grpc
+        dapr.io/enabled: "true"
+        dapr.io/log-level: "debug"
+        dapr.io/config: "tracing"
+        dapr.io/env: "OTEL_SERVICE_NAME=app-daprd-consumer"
+        dapr.io/enable-app-health-check: "true"
+        instrumentation.opentelemetry.io/inject-java: "opentelemetry/instrumentation" 
+      labels:
+        app: app-consumer
+        app.kubernetes.io/name: app-consumer
+        app.kubernetes.io/part-of: app-consumer
+        app.kubernetes.io/version: 0.1.0
+    spec:
+      containers:
+      - name: app-consumer
+        image: localhost:5001/pubsub-pulsar-reproducer:latest
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+        resources:
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+        env:
+        - name: APP_PUBLISHER_ENABLED
+          value: "false"
+        - name: APP_CONSUMER_ENABLED
+          value: "true"
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-consumer-svc
+spec:
+  selector:
+    app: app-consumer
+  ports:
+  - port: 80
+    targetPort: 8080

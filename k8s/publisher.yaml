@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-publisher
+spec:
+  selector:
+    matchLabels:
+      app: app-publisher
+  template:
+    metadata:
+      annotations:  
+        dapr.io/app-id: app-publisher
+        dapr.io/app-port: "3000"
+        dapr.io/app-protocol: grpc
+        dapr.io/enabled: "true"
+        dapr.io/log-level: "debug"
+        dapr.io/config: "tracing"
+        dapr.io/env: "OTEL_SERVICE_NAME=app-daprd-publisher"
+        instrumentation.opentelemetry.io/inject-java: "opentelemetry/instrumentation" 
+      labels:
+        app: app-publisher
+        app.kubernetes.io/name: app-publisher
+        app.kubernetes.io/part-of: app-publisher
+        app.kubernetes.io/version: 0.1.0
+    spec:
+      containers:
+      - name: app-publisher
+        image: localhost:5001/pubsub-pulsar-reproducer:latest
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+        resources:
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+        env:
+        - name: APP_PUBLISHER_ENABLED
+          value: "true"
+        - name: APP_CONSUMER_ENABLED
+          value: "false"
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-publisher-svc
+spec:
+  selector:
+    app: app-publisher
+  ports:
+  - port: 80
+    targetPort: 8080
