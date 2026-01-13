@@ -4,33 +4,21 @@ import com.google.protobuf.Empty;
 import io.dapr.v1.AppCallbackGrpc;
 import io.dapr.v1.DaprAppCallbackProtos;
 import io.grpc.Context;
-import io.grpc.Contexts;
 import io.grpc.Metadata;
-import io.grpc.ServerCall;
-import io.grpc.ServerCallHandler;
-import io.grpc.ServerInterceptor;
 import io.grpc.stub.StreamObserver;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static io.javi.dapr.example.interceptors.MetadataInterceptor.METADATA_KEY;
 
 /**
  * Class that encapsulates all client-side logic for Grpc.
  */
 public class SubscriberGrpcService extends AppCallbackGrpc.AppCallbackImplBase {
+  private static final org.slf4j.Logger logger = LoggerFactory.getLogger(SubscriberGrpcService.class);
   private final List<DaprAppCallbackProtos.TopicSubscription> topicSubscriptionList = new ArrayList<>();
-
-  public static final Context.Key<Metadata> METADATA_KEY = Context.key("grpc-metadata");
-
-  // gRPC interceptor to capture metadata
-  public static class MetadataInterceptor implements ServerInterceptor {
-    @Override
-    public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(
-        ServerCall<ReqT, RespT> call, Metadata headers, ServerCallHandler<ReqT, RespT> next) {
-      Context contextWithMetadata = Context.current().withValue(METADATA_KEY, headers);
-      return Contexts.interceptCall(contextWithMetadata, call, headers, next);
-    }
-  }
 
   @Override
   public void listTopicSubscriptions(Empty request,
@@ -52,42 +40,45 @@ public class SubscriberGrpcService extends AppCallbackGrpc.AppCallbackImplBase {
     }
   }
 
+  private static void logGrpcMetadata() {
+    try {
+      Context context = Context.current();
+      Metadata metadata = METADATA_KEY.get(context);
+
+      if (metadata != null) {
+        logger.info("Metadata found in context");
+        String apiToken = metadata.get(Metadata.Key.of("dapr-api-token", Metadata.ASCII_STRING_MARSHALLER));
+        if (apiToken != null) {
+          logger.info("API Token extracted: {}", apiToken);
+        } else {
+          logger.info("No 'dapr-api-token' found in metadata");
+        }
+        logger.info("All metadata:");
+        for (String key : metadata.keys()) {
+          if (key.equals("grpc-trace-bin")) {
+            byte[] value = metadata.get(Metadata.Key.of(key, Metadata.BINARY_BYTE_MARSHALLER));
+            logger.info("key: {}:{}", key, BulkSubscriberGrpcService.buildTraceparentFromGrpcTraceBin(value));
+            continue;
+          }
+          String value = metadata.get(Metadata.Key.of(key, Metadata.ASCII_STRING_MARSHALLER));
+          logger.info("key: {}:{}", key, value);
+        }
+      } else {
+        logger.info("No metadata found in context");
+      }
+    } catch (Exception e) {
+      logger.info(" Error extracting metadata: {}", e.getMessage());
+    }
+  }
+
   @Override
   public void onTopicEvent(DaprAppCallbackProtos.TopicEventRequest request,
                            StreamObserver<DaprAppCallbackProtos.TopicEventResponse> responseObserver) {
 
     try {
-      try {
-        Context context = Context.current();
-        Metadata metadata = METADATA_KEY.get(context);
-
-        if (metadata != null) {
-          System.out.println("Metadata found in context");
-          String apiToken = metadata.get(Metadata.Key.of("dapr-api-token", Metadata.ASCII_STRING_MARSHALLER));
-          if (apiToken != null) {
-            System.out.println("API Token extracted: " + apiToken);
-          } else {
-            System.out.println("No 'dapr-api-token' found in metadata");
-          }
-          System.out.println("All metadata:");
-          for (String key : metadata.keys()) {
-            if (key.equals("grpc-trace-bin")) {
-              byte[] value = metadata.get(Metadata.Key.of(key, Metadata.BINARY_BYTE_MARSHALLER));
-              System.out.println("key: " + key + ": " + BulkSubscriberGrpcService.buildTraceparentFromGrpcTraceBin(value));
-              continue;
-            }
-            String value = metadata.get(Metadata.Key.of(key, Metadata.ASCII_STRING_MARSHALLER));
-            System.out.println("key: " + key + ": " + value);
-          }
-        } else {
-          System.out.println("No metadata found in context");
-        }
-      } catch (Exception e) {
-        System.out.println(" Error extracting metadata: " + e.getMessage());
-      }
-
+      logGrpcMetadata();
       String data = request.getData().toStringUtf8().replace("\"", "");
-      System.out.println("Subscriber got: " + data);
+      logger.info("Subscriber got: {}", data);
       DaprAppCallbackProtos.TopicEventResponse response = DaprAppCallbackProtos.TopicEventResponse.newBuilder()
           .setStatus(DaprAppCallbackProtos.TopicEventResponse.TopicEventResponseStatus.SUCCESS)
           .build();

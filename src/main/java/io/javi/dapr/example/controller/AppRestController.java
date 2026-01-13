@@ -28,10 +28,11 @@ public class AppRestController {
   private DaprPreviewClient previewClient;
   @Autowired
   private DaprWorkflowClient daprWorkflowClient;
+  private String lastInstanceId = "";
 
   @PostMapping("/send/{message}")
   public String sendMessage(@PathVariable("message") String message, @RequestParam(required = false) boolean rawPayload) {
-    logger.info("Sending message: " + message);
+    logger.info("Sending message: {}", message);
 
     Map<String, String> metadata = new HashMap<>();
     var topicaName = "topic";
@@ -51,9 +52,12 @@ public class AppRestController {
 
   @PostMapping("/bulk/{topic}/{message}")
   public String bulkMessage(@PathVariable("topic") String topic, @PathVariable("message") String message) {
-    logger.info("Sending messages: " + message + "1" + message + "2" + message + "3");
+    var m1 = message + "1";
+    var m2 = message + "2";
+    var m3 = message + "3";
+    logger.info("Sending messages: {} {} {}", m1, m2, m3);
 
-    previewClient.publishEvents("pubsub", topic, "", message + "1", message + "2", message + "3")
+    previewClient.publishEvents("pubsub", topic, "", m1, m2, m3)
         .block();
 
     return "Message sent successfully";
@@ -63,7 +67,18 @@ public class AppRestController {
   public String startWorkflow() {
     String instanceId = daprWorkflowClient.scheduleNewWorkflow(SimpleWorkflow.class);
     logger.info("Workflow instance {} started", instanceId);
-
+    this.lastInstanceId = instanceId;
     return "New Workflow Instance created " + instanceId;
+  }
+
+  @PostMapping("/workflow/event")
+  public String raiseEvent() {
+    if ("".equals(this.lastInstanceId)) {
+      return "No workflow instance to raise event";
+    }
+
+    daprWorkflowClient.raiseEvent(this.lastInstanceId, "hello", "Hello World!");
+
+    return "Event raised successfully for workflow instance " + this.lastInstanceId;
   }
 }

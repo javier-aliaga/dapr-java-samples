@@ -16,7 +16,7 @@ spec:
         dapr.io/log-level: "debug"
         dapr.io/config: "tracing"
         dapr.io/env: "OTEL_SERVICE_NAME=app-daprd-publisher"
-        instrumentation.opentelemetry.io/inject-java: "opentelemetry/instrumentation" 
+        instrumentation.opentelemetry.io/inject-java: "opentelemetry/instrumentation"
       labels:
         app: app-publisher
         app.kubernetes.io/name: app-publisher

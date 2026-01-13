@@ -1,7 +1,5 @@
 package io.javi.dapr.example.service.pubsub;
 
-import java.util.function.Consumer;
-
 import io.dapr.v1.AppCallbackAlphaGrpc;
 import io.dapr.v1.DaprAppCallbackProtos.TopicEventBulkRequestEntry;
 import io.dapr.v1.DaprAppCallbackProtos.TopicEventBulkResponse;
@@ -15,6 +13,10 @@ import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.propagation.TextMapGetter;
+
+import java.util.function.Consumer;
+
+import static io.javi.dapr.example.interceptors.MetadataInterceptor.METADATA_KEY;
 
 /**
  * Class that encapsulates all client-side logic for Grpc.
@@ -123,7 +125,7 @@ public class BulkSubscriberGrpcService extends AppCallbackAlphaGrpc.AppCallbackA
   public void extractMetadata() {
     try {
       Context context = Context.current();
-      Metadata metadata = SubscriberGrpcService.METADATA_KEY.get(context);
+      Metadata metadata = METADATA_KEY.get(context);
 
       if (metadata != null) {
         System.out.println("Metadata found in context");

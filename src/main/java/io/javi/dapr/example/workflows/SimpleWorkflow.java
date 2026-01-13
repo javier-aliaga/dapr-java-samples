@@ -15,6 +15,7 @@ public class SimpleWorkflow implements Workflow {
 
       ctx.callActivity(Activity1.class.getName()).await();
       ctx.callActivity(Activity2.class.getName()).await();
+      ctx.waitForExternalEvent("hello").await();
       ctx.callActivity(Activity3.class.getName()).await();
 
       ctx.getLogger().info("Simple workflow completed.");

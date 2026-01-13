@@ -6,12 +6,20 @@ ARG JVM_IMAGE=eclipse-temurin:21-jre
 FROM ${MAVEN_IMAGE} AS builder
 WORKDIR /workspace
 
+# First, copy the local Dapr SNAPSHOT artifacts
+COPY .m2/repository/io/dapr /root/.m2/repository/io/dapr
+
 COPY pom.xml .
+
+# Download dependencies with cache mount (Dapr artifacts are already in place)
+RUN --mount=type=cache,target=/tmp/.m2,sharing=locked \
+    mvn dependency:go-offline -B || true
+
 COPY src ./src
 
-RUN apt-get update && apt-get install -y iproute2
-
+# Build with writable m2 repository
 RUN mvn -B -DskipTests package
+
 
 FROM ${JVM_IMAGE} AS runtime
 WORKDIR /app

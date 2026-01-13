@@ -14,6 +14,7 @@ public class Activity3 implements WorkflowActivity {
   @Override
   public Object run(WorkflowActivityContext workflowActivityContext) {
     logger.info("Activity 3 called");
+    logger.info("Traceparent: {}", workflowActivityContext.getTraceParent());
     try {
       Thread.sleep(1000);
     } catch (InterruptedException e) {

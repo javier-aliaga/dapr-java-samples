@@ -29,7 +29,7 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
-    <dapr.version>1.16.0</dapr.version>
+    <dapr.version>1.17.0-SNAPSHOT</dapr.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -74,7 +74,7 @@
       <artifactId>opentelemetry-context</artifactId>
       <version>1.40.0</version>
 		</dependency>
-	</dependencies>
+  </dependencies>
 
 	<build>
 		<plugins>
